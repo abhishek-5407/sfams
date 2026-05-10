@@ -22,6 +22,21 @@ const StudentSchema = new mongoose.Schema({
   phone: {
     type: String,
   },
+  fatherName: {
+    type: String,
+  },
+  course: {
+    type: String,
+  },
+  semester: {
+    type: String,
+  },
+  address: {
+    type: String,
+  },
+  photo: {
+    type: String,
+  },
   feesStatus: {
     type: String,
     enum: ['paid', 'partial', 'unpaid'],

@@ -12,6 +12,7 @@ import {
   Loader2
 } from 'lucide-react';
 import Link from 'next/link';
+import toast from 'react-hot-toast';
 
 export default function TeacherAttendance() {
   const [students, setStudents] = useState([]);
@@ -19,17 +20,34 @@ export default function TeacherAttendance() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState('');
+  const [currentDate, setCurrentDate] = useState(new Date());
 
   useEffect(() => {
-    const fetchStudents = async () => {
+    const fetchStudentsAndAttendance = async () => {
+      setLoading(true);
       try {
-        const res = await fetch('/api/students');
-        const data = await res.json();
-        if (res.ok) {
-          setStudents(data);
-          // Initialize all as present
+        // Fetch students
+        const resStudents = await fetch('/api/students');
+        const studentsData = await resStudents.json();
+        
+        if (resStudents.ok) {
+          setStudents(studentsData);
+          
+          // Fetch attendance for current date
+          const resAttendance = await fetch(`/api/attendance?date=${currentDate.toISOString()}`);
+          const attendanceData = await resAttendance.json();
+          
           const initial = {};
-          data.forEach(s => initial[s._id] = 'present');
+          // First set all to present as default
+          studentsData.forEach(s => initial[s._id] = 'present');
+          
+          // Then override with saved data if any
+          if (resAttendance.ok && attendanceData.length > 0) {
+            attendanceData.forEach(record => {
+              const sId = record.student?._id || record.student;
+              if (sId) initial[sId] = record.status;
+            });
+          }
           setAttendance(initial);
         }
       } catch (err) {
@@ -38,8 +56,8 @@ export default function TeacherAttendance() {
         setLoading(false);
       }
     };
-    fetchStudents();
-  }, []);
+    fetchStudentsAndAttendance();
+  }, [currentDate]);
 
   const handleStatusChange = (id, status) => {
     setAttendance(prev => ({ ...prev, [id]: status }));
@@ -47,7 +65,7 @@ export default function TeacherAttendance() {
 
   const handleSave = async () => {
     setSaving(true);
-    setMessage('');
+    const loadId = toast.loading('Saving attendance...');
     try {
       const user = JSON.parse(localStorage.getItem('user') || '{}');
       const attendanceData = Object.keys(attendance).map(id => ({
@@ -55,23 +73,28 @@ export default function TeacherAttendance() {
         status: attendance[id]
       }));
 
+      // Normalize date to midnight
+      const dateToSave = new Date(currentDate);
+      dateToSave.setHours(0, 0, 0, 0);
+
       const res = await fetch('/api/attendance', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           attendanceData,
-          date: new Date().toISOString(),
-          markedBy: user.id || '6639d1b2e4b0a1a1a1a1a1a1' // Fallback for testing
+          date: dateToSave.toISOString(),
+          markedBy: user._id || user.id || '6639d1b2e4b0a1a1a1a1a1a1'
         })
       });
 
       if (res.ok) {
-        setMessage('Attendance saved successfully!');
+        toast.success('Attendance saved successfully!', { id: loadId });
       } else {
-        setMessage('Failed to save attendance');
+        const errorData = await res.json();
+        toast.error(errorData.message || 'Failed to save attendance', { id: loadId });
       }
     } catch (err) {
-      setMessage('Error connecting to server');
+      toast.error('Error connecting to server', { id: loadId });
     } finally {
       setSaving(false);
     }
@@ -98,11 +121,33 @@ export default function TeacherAttendance() {
             <p className="text-slate-400 text-sm">Update today's records</p>
           </div>
         </div>
-        <div className="bg-slate-900 border border-slate-800 px-6 py-3 rounded-2xl flex items-center space-x-3 shadow-xl">
-          <CalendarIcon className="w-5 h-5 text-emerald-500" />
-          <span className="text-white font-bold tracking-tight">
-            {new Date().toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}
-          </span>
+        <div className="flex items-center space-x-3 bg-slate-900 border border-slate-800 p-1.5 rounded-2xl shadow-xl">
+          <button 
+            onClick={() => setCurrentDate(prev => {
+              const d = new Date(prev);
+              d.setDate(d.getDate() - 1);
+              return d;
+            })}
+            className="p-2 hover:bg-slate-800 rounded-xl text-slate-400 transition-all"
+          >
+            <ChevronLeft className="w-5 h-5" />
+          </button>
+          <div className="flex items-center space-x-3 px-4">
+            <CalendarIcon className="w-5 h-5 text-emerald-400" />
+            <span className="text-white font-bold tracking-tight">
+              {currentDate.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}
+            </span>
+          </div>
+          <button 
+            onClick={() => setCurrentDate(prev => {
+              const d = new Date(prev);
+              d.setDate(d.getDate() + 1);
+              return d;
+            })}
+            className="p-2 hover:bg-slate-800 rounded-xl text-slate-400 transition-all"
+          >
+            <ChevronLeft className="w-5 h-5 rotate-180" />
+          </button>
         </div>
       </div>
 

@@ -16,13 +16,20 @@ const FeeSchema = new mongoose.Schema({
   },
   paymentMethod: {
     type: String,
-    enum: ['Cash', 'Online', 'Card', 'UPI'],
+    enum: ['Cash', 'Online', 'Card', 'UPI', 'Check'],
     required: true,
   },
   transactionId: {
     type: String,
-    unique: true,
+    required: false,
+  },
+  month: {
+    type: String,
     required: true,
+  },
+  status: {
+    type: String,
+    default: 'Paid',
   },
   remarks: {
     type: String,

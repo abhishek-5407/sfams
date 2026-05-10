@@ -94,7 +94,7 @@ export default function TeacherDashboard() {
                     </div>
                     <div>
                       <div className="text-white font-bold group-hover:text-emerald-400 transition-colors">
-                        Student ID: {item.student.substring(0, 8)}...
+                        {item.student?.user?.name || `ID: ${(item.student?._id || item.student || '').toString().substring(0, 8)}...`}
                       </div>
                       <div className="text-slate-500 text-xs uppercase tracking-widest font-bold">Status: {item.status}</div>
                     </div>

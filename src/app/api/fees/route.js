@@ -27,21 +27,35 @@ export async function POST(req) {
     const { studentId, amount, paymentMethod, transactionId, month } = await req.json();
     await connectDB();
 
+    const numAmount = Number(amount);
+
     // Create Fee Record
     const feeRecord = await Fee.create({
       student: studentId,
-      amount,
+      amount: numAmount,
       paymentMethod,
-      transactionId,
+      transactionId: transactionId || "",
       status: 'Paid',
       date: new Date(),
       month
     });
 
-    // Update Student's paidAmount in Student model
-    await Student.findByIdAndUpdate(studentId, {
-      $inc: { paidAmount: amount }
-    });
+    // Update Student's paidAmount and feesStatus
+    const student = await Student.findById(studentId);
+    if (student) {
+      const newPaidAmount = (student.paidAmount || 0) + numAmount;
+      let newStatus = 'unpaid';
+      if (newPaidAmount >= student.totalFees) {
+        newStatus = 'paid';
+      } else if (newPaidAmount > 0) {
+        newStatus = 'partial';
+      }
+      
+      await Student.findByIdAndUpdate(studentId, {
+        paidAmount: newPaidAmount,
+        feesStatus: newStatus
+      });
+    }
 
     return NextResponse.json(feeRecord, { status: 201 });
   } catch (error) {

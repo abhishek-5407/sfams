@@ -9,14 +9,14 @@ import {
   LogOut, 
   GraduationCap,
   Bell,
-  BookOpen
+  History
 } from 'lucide-react';
 
 const navItems = [
   { icon: LayoutDashboard, label: 'Teacher Dashboard', href: '/teacher-dashboard' },
   { icon: CalendarCheck, label: 'Mark Attendance', href: '/teacher-dashboard/attendance' },
+  { icon: History, label: 'Attendance History', href: '/dashboard/attendance-history' },
   { icon: Users, label: 'My Students', href: '/teacher-dashboard/students' },
-  { icon: BookOpen, label: 'My Classes', href: '/teacher-dashboard/classes' },
 ];
 
 export default function TeacherSidebar() {

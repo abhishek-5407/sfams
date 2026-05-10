@@ -1,5 +1,5 @@
 "use client";
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
   Users, 
   CreditCard, 
@@ -7,45 +7,85 @@ import {
   TrendingUp, 
   ArrowUpRight, 
   ArrowDownRight,
-  MoreVertical
+  MoreVertical,
+  Loader2
 } from 'lucide-react';
-
-const stats = [
-  { 
-    label: 'Total Students', 
-    value: '2,420', 
-    change: '+12%', 
-    trend: 'up', 
-    icon: Users,
-    color: 'blue'
-  },
-  { 
-    label: 'Total Fees Collected', 
-    value: '₹12.5L', 
-    change: '+8%', 
-    trend: 'up', 
-    icon: CreditCard,
-    color: 'emerald'
-  },
-  { 
-    label: 'Avg. Attendance', 
-    value: '84.2%', 
-    change: '-2%', 
-    trend: 'down', 
-    icon: CalendarCheck,
-    color: 'indigo'
-  },
-  { 
-    label: 'Pending Dues', 
-    value: '₹3.2L', 
-    change: '+5%', 
-    trend: 'up', 
-    icon: TrendingUp,
-    color: 'amber'
-  },
-];
+import { 
+  BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, ResponsiveContainer,
+  LineChart, Line
+} from 'recharts';
+import { useRouter } from 'next/navigation';
 
 export default function DashboardOverview() {
+  const router = useRouter();
+  const [data, setData] = useState(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchDashboardData = async () => {
+      try {
+        const token = localStorage.getItem('token');
+        const res = await fetch('/api/dashboard', {
+          headers: {
+            'Authorization': `Bearer ${token}`
+          }
+        });
+        if (res.ok) {
+          const result = await res.json();
+          setData(result);
+        }
+      } catch (error) {
+        console.error('Error fetching dashboard data:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchDashboardData();
+  }, []);
+
+  if (loading) {
+    return (
+      <div className="flex h-full items-center justify-center">
+        <Loader2 className="w-10 h-10 animate-spin text-blue-500" />
+      </div>
+    );
+  }
+
+  const stats = [
+    { 
+      label: 'Total Students', 
+      value: data?.totalStudents || 0, 
+      change: '+5%', 
+      trend: 'up', 
+      icon: Users,
+      color: 'blue'
+    },
+    { 
+      label: 'Total Fees Collected', 
+      value: `₹${data?.totalFeesCollected?.toLocaleString() || 0}`, 
+      change: '+12%', 
+      trend: 'up', 
+      icon: CreditCard,
+      color: 'emerald'
+    },
+    { 
+      label: 'Avg. Attendance', 
+      value: `${data?.avgAttendance || 0}%`, 
+      change: '+2%', 
+      trend: 'up', 
+      icon: CalendarCheck,
+      color: 'indigo'
+    },
+    { 
+      label: 'Pending Dues', 
+      value: `₹${data?.pendingDues?.toLocaleString() || 0}`, 
+      change: '-5%', 
+      trend: 'down', 
+      icon: TrendingUp,
+      color: 'amber'
+    },
+  ];
+
   return (
     <div className="space-y-8">
       {/* Header */}
@@ -54,7 +94,10 @@ export default function DashboardOverview() {
           <h1 className="text-2xl font-bold text-white">Dashboard Overview</h1>
           <p className="text-slate-400">Welcome back, Administrator</p>
         </div>
-        <button className="bg-blue-600 hover:bg-blue-500 text-white px-4 py-2 rounded-xl font-semibold transition-all shadow-lg shadow-blue-600/20">
+        <button 
+          onClick={() => router.push('/dashboard/reports')}
+          className="bg-blue-600 hover:bg-blue-500 text-white px-4 py-2 rounded-xl font-semibold transition-all shadow-lg shadow-blue-600/20"
+        >
           Generate Report
         </button>
       </div>
@@ -80,6 +123,48 @@ export default function DashboardOverview() {
         ))}
       </div>
 
+      {/* Charts Area */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+        <div className="bg-slate-900 border border-slate-800 rounded-3xl p-6">
+          <h3 className="text-lg font-bold text-white mb-6">Monthly Collection (Fees)</h3>
+          <div className="h-64 w-full">
+            {data?.feeChartData && (
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart data={data.feeChartData}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="#1e293b" vertical={false} />
+                  <XAxis dataKey="name" stroke="#64748b" axisLine={false} tickLine={false} />
+                  <YAxis stroke="#64748b" axisLine={false} tickLine={false} tickFormatter={(value) => `₹${value/1000}k`} />
+                  <RechartsTooltip 
+                    cursor={{fill: '#1e293b'}} 
+                    contentStyle={{ backgroundColor: '#0f172a', borderColor: '#1e293b', borderRadius: '8px' }}
+                  />
+                  <Bar dataKey="amount" fill="#3b82f6" radius={[4, 4, 0, 0]} />
+                </BarChart>
+              </ResponsiveContainer>
+            )}
+          </div>
+        </div>
+
+        <div className="bg-slate-900 border border-slate-800 rounded-3xl p-6">
+          <h3 className="text-lg font-bold text-white mb-6">Attendance Analytics (Last 7 Days)</h3>
+          <div className="h-64 w-full">
+            {data?.attendanceAnalytics && (
+              <ResponsiveContainer width="100%" height="100%">
+                <LineChart data={data.attendanceAnalytics}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="#1e293b" vertical={false} />
+                  <XAxis dataKey="date" stroke="#64748b" axisLine={false} tickLine={false} />
+                  <YAxis stroke="#64748b" axisLine={false} tickLine={false} domain={[0, 100]} tickFormatter={(value) => `${value}%`} />
+                  <RechartsTooltip 
+                    contentStyle={{ backgroundColor: '#0f172a', borderColor: '#1e293b', borderRadius: '8px' }}
+                  />
+                  <Line type="monotone" dataKey="percentage" stroke="#10b981" strokeWidth={3} dot={{r: 4, fill: '#10b981', strokeWidth: 2, stroke: '#0f172a'}} />
+                </LineChart>
+              </ResponsiveContainer>
+            )}
+          </div>
+        </div>
+      </div>
+
       {/* Main Content Area */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
         {/* Recent Activity Table */}
@@ -101,81 +186,65 @@ export default function DashboardOverview() {
                 </tr>
               </thead>
               <tbody className="text-slate-300">
-                <tr className="border-b border-slate-800/30 hover:bg-slate-800/30 transition-colors">
-                  <td className="px-6 py-4">
-                    <div className="flex items-center space-x-3">
-                      <div className="w-8 h-8 rounded-full bg-slate-800"></div>
-                      <span>Rahul Sharma</span>
-                    </div>
-                  </td>
-                  <td className="px-6 py-4 font-medium">₹12,500</td>
-                  <td className="px-6 py-4 text-sm text-slate-500">2 mins ago</td>
-                  <td className="px-6 py-4">
-                    <span className="px-2.5 py-0.5 rounded-full bg-emerald-500/10 text-emerald-500 text-xs font-bold border border-emerald-500/20">Success</span>
-                  </td>
-                </tr>
-                <tr className="border-b border-slate-800/30 hover:bg-slate-800/30 transition-colors">
-                  <td className="px-6 py-4">
-                    <div className="flex items-center space-x-3">
-                      <div className="w-8 h-8 rounded-full bg-slate-800"></div>
-                      <span>Anjali Gupta</span>
-                    </div>
-                  </td>
-                  <td className="px-6 py-4 font-medium">₹8,000</td>
-                  <td className="px-6 py-4 text-sm text-slate-500">1 hour ago</td>
-                  <td className="px-6 py-4">
-                    <span className="px-2.5 py-0.5 rounded-full bg-amber-500/10 text-amber-500 text-xs font-bold border border-amber-500/20">Pending</span>
-                  </td>
-                </tr>
-                <tr className="border-b border-slate-800/30 hover:bg-slate-800/30 transition-colors">
-                  <td className="px-6 py-4">
-                    <div className="flex items-center space-x-3">
-                      <div className="w-8 h-8 rounded-full bg-slate-800"></div>
-                      <span>Vikas Singh</span>
-                    </div>
-                  </td>
-                  <td className="px-6 py-4 font-medium">₹15,000</td>
-                  <td className="px-6 py-4 text-sm text-slate-500">5 hours ago</td>
-                  <td className="px-6 py-4">
-                    <span className="px-2.5 py-0.5 rounded-full bg-emerald-500/10 text-emerald-500 text-xs font-bold border border-emerald-500/20">Success</span>
-                  </td>
-                </tr>
+                {data?.recentFees?.length > 0 ? data.recentFees.map((fee) => (
+                  <tr key={fee._id} className="border-b border-slate-800/30 hover:bg-slate-800/30 transition-colors">
+                    <td className="px-6 py-4">
+                      <div className="flex items-center space-x-3">
+                        <div className="w-8 h-8 rounded-full bg-slate-800 flex items-center justify-center font-bold text-xs text-slate-400">
+                          {fee.studentName.charAt(0).toUpperCase()}
+                        </div>
+                        <span>{fee.studentName}</span>
+                      </div>
+                    </td>
+                    <td className="px-6 py-4 font-medium">₹{fee.amount}</td>
+                    <td className="px-6 py-4 text-sm text-slate-500">{new Date(fee.date).toLocaleDateString()}</td>
+                    <td className="px-6 py-4">
+                      <span className={`px-2.5 py-0.5 rounded-full text-xs font-bold border ${fee.status === 'Paid' ? 'bg-emerald-500/10 text-emerald-500 border-emerald-500/20' : 'bg-amber-500/10 text-amber-500 border-amber-500/20'}`}>
+                        {fee.status}
+                      </span>
+                    </td>
+                  </tr>
+                )) : (
+                  <tr>
+                    <td colSpan="4" className="px-6 py-8 text-center text-slate-500">No recent payments</td>
+                  </tr>
+                )}
               </tbody>
             </table>
           </div>
           <div className="p-4 bg-slate-900 border-t border-slate-800 text-center">
-            <button className="text-blue-500 hover:text-blue-400 font-bold text-sm">View All Transactions</button>
+            <button onClick={() => router.push('/dashboard/fees')} className="text-blue-500 hover:text-blue-400 font-bold text-sm">View All Transactions</button>
           </div>
         </div>
 
         {/* Quick Actions / Attendance Status */}
         <div className="bg-slate-900 border border-slate-800 rounded-3xl p-6">
-          <h3 className="text-lg font-bold text-white mb-6">Attendance Status</h3>
+          <h3 className="text-lg font-bold text-white mb-6">Attendance Overview</h3>
           <div className="space-y-6">
             <div className="space-y-2">
               <div className="flex justify-between text-sm">
-                <span className="text-slate-400">Total Classes Today</span>
-                <span className="text-white font-bold">12</span>
+                <span className="text-slate-400">Today's Avg Attendance</span>
+                <span className="text-white font-bold">{data?.avgAttendance || 0}%</span>
               </div>
               <div className="w-full bg-slate-800 h-2 rounded-full overflow-hidden">
-                <div className="bg-blue-600 h-full w-[80%] rounded-full"></div>
+                <div className="bg-blue-600 h-full rounded-full" style={{ width: `${data?.avgAttendance || 0}%` }}></div>
               </div>
             </div>
             
             <div className="pt-6 border-t border-slate-800">
               <h4 className="text-sm font-bold text-slate-500 uppercase tracking-wider mb-4">Quick Actions</h4>
               <div className="grid grid-cols-2 gap-3">
-                <button className="p-3 rounded-xl bg-slate-800 hover:bg-slate-700 text-white text-sm font-medium transition-all text-center">
+                <button onClick={() => router.push('/dashboard/students')} className="p-3 rounded-xl bg-slate-800 hover:bg-slate-700 text-white text-sm font-medium transition-all text-center">
                   Add Student
                 </button>
-                <button className="p-3 rounded-xl bg-slate-800 hover:bg-slate-700 text-white text-sm font-medium transition-all text-center">
+                <button onClick={() => router.push('/dashboard/attendance')} className="p-3 rounded-xl bg-slate-800 hover:bg-slate-700 text-white text-sm font-medium transition-all text-center">
                   Mark Attendance
                 </button>
-                <button className="p-3 rounded-xl bg-slate-800 hover:bg-slate-700 text-white text-sm font-medium transition-all text-center">
-                  Fee Waiver
+                <button onClick={() => router.push('/dashboard/fees')} className="p-3 rounded-xl bg-slate-800 hover:bg-slate-700 text-white text-sm font-medium transition-all text-center">
+                  Collect Fees
                 </button>
-                <button className="p-3 rounded-xl bg-slate-800 hover:bg-slate-700 text-white text-sm font-medium transition-all text-center">
-                  Send Alerts
+                <button onClick={() => router.push('/dashboard/reports')} className="p-3 rounded-xl bg-slate-800 hover:bg-slate-700 text-white text-sm font-medium transition-all text-center">
+                  Generate Report
                 </button>
               </div>
             </div>

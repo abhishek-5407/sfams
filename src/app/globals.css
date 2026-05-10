@@ -43,3 +43,10 @@
   animation-delay: 4s;
 }
 
+/* Fix for native date picker icon in dark mode */
+input[type="date"]::-webkit-calendar-picker-indicator {
+    filter: invert(1);
+    cursor: pointer;
+    padding: 2px;
+}
+

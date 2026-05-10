@@ -11,10 +11,13 @@ export const metadata = {
   description: "Next-generation Student Fees & Attendance Management System",
 };
 
+import { Toaster } from 'react-hot-toast';
+
 export default function RootLayout({ children }) {
   return (
     <html lang="en">
       <body className={outfit.className}>
+        <Toaster position="top-right" />
         {children}
       </body>
     </html>

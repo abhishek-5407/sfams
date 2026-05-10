@@ -10,14 +10,20 @@ import {
   Settings, 
   LogOut, 
   GraduationCap,
-  Bell
+  Bell,
+  History,
+  MessageSquare,
+  FileText
 } from 'lucide-react';
 
 const navItems = [
   { icon: LayoutDashboard, label: 'Overview', href: '/dashboard' },
   { icon: Users, label: 'Students', href: '/dashboard/students' },
-  { icon: CalendarCheck, label: 'Attendance', href: '/dashboard/attendance' },
+  { icon: CalendarCheck, label: 'Daily Attendance', href: '/dashboard/attendance' },
+  { icon: History, label: 'Attendance History', href: '/dashboard/attendance-history' },
+  { icon: MessageSquare, label: 'Leave Requests', href: '/dashboard/leaves' },
   { icon: CreditCard, label: 'Fees Management', href: '/dashboard/fees' },
+  { icon: FileText, label: 'Reports', href: '/dashboard/reports' },
   { icon: Settings, label: 'Settings', href: '/dashboard/settings' },
 ];
 
